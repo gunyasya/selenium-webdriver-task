@@ -1,0 +1,35 @@
+package driver;
+
+import io.github.bonigarcia.wdm.WebDriverManager;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.firefox.FirefoxDriver;
+import org.openqa.selenium.firefox.FirefoxOptions;
+
+import java.util.function.Supplier;
+
+@Getter
+@RequiredArgsConstructor
+public enum Browser {
+    CHROME(
+            () -> {
+                WebDriverManager.chromedriver().setup();
+                ChromeOptions options = new ChromeOptions();
+                options.addArguments("--incognito");
+                return new ChromeDriver(options);
+            }
+    ),
+    FIREFOX(
+            () -> {
+                WebDriverManager.firefoxdriver().setup();
+                FirefoxOptions options = new FirefoxOptions();
+                options.addArguments("-private");
+                return new FirefoxDriver(options);
+            }
+    );
+
+    private final Supplier<WebDriver> webDriverSupplier;
+}
