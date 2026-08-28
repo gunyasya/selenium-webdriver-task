@@ -1,6 +1,7 @@
 package pages;
 
 import lombok.extern.slf4j.Slf4j;
+import model.User;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.FindBy;
@@ -24,16 +25,16 @@ public class LoginPage extends BasePage {
         super(driver);
     }
 
-    public InventoryPage login(String username, String password) {
-        log.info("Logging in as: {}", username);
-        enterCredentials(username, password);
+    public InventoryPage login(User user) {
+        log.info("Logging in as: {}", user.username());
+        enterCredentials(user);
         urlContains(PageUrls.INVENTORY);
         return new InventoryPage(driver);
     }
 
-    public LoginPage attemptLogin(String username, String password) {
-        log.info("Attempting login as: {}", username);
-        enterCredentials(username, password);
+    public LoginPage attemptLogin(User user) {
+        log.info("Attempting login as: {}", user.username());
+        enterCredentials(user);
         return this;
     }
 
@@ -41,15 +42,15 @@ public class LoginPage extends BasePage {
         return getText(errorMessage);
     }
 
-    public LoginPage open() {
-        log.info("Opening login page");
-        driver.get(PageUrls.BASE_URL);
+    public LoginPage open(String baseUrl) {
+        log.info("Opening login page: {}", baseUrl);
+        driver.get(baseUrl);
         return this;
     }
 
-    private void enterCredentials(String username, String password) {
-        typeText(usernameField, username);
-        typeText(passwordField, password);
+    private void enterCredentials(User user) {
+        typeText(usernameField, user.username());
+        typeText(passwordField, user.password());
         click(loginButton);
     }
 }

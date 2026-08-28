@@ -14,22 +14,41 @@ import java.util.function.Supplier;
 @Getter
 @RequiredArgsConstructor
 public enum Browser {
+
     CHROME(
-            () -> {
+            () ->
+
+            {
                 WebDriverManager.chromedriver().setup();
                 ChromeOptions options = new ChromeOptions();
+                if (isHeadless()) {
+                    options.addArguments("--headless=new");
+                }
                 options.addArguments("--incognito");
                 return new ChromeDriver(options);
             }
     ),
+
     FIREFOX(
-            () -> {
+            () ->
+
+            {
                 WebDriverManager.firefoxdriver().setup();
                 FirefoxOptions options = new FirefoxOptions();
+                if (isHeadless()) {
+                    options.addArguments("-headless");
+                }
                 options.addArguments("-private");
                 return new FirefoxDriver(options);
             }
     );
 
     private final Supplier<WebDriver> webDriverSupplier;
+
+    private static boolean isHeadless() {
+        String property = System.getProperty("headless");
+        if (property != null) {
+            return Boolean.parseBoolean(property);
+        } else return System.getenv("CI") != null;
+    }
 }

@@ -1,0 +1,50 @@
+image: maven:3.9-eclipse-temurin-17
+
+stages:
+  - test
+
+variables:
+  MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
+  MAVEN_CLI_OPTS: "-o --batch-mode"
+
+cache:
+  key: "$CI_COMMIT_REF_SLUG"
+  paths:
+    - .m2/repository
+
+before_script:
+  # Google Chrome isn't preinstalled in this image; WebDriverManager only downloads
+  # chromedriver, not the browser itself. Headless mode is picked automatically —
+  # Browser.isHeadless() detects the CI=true variable GitLab sets on every job.
+  - apt-get update -qq
+  - apt-get install -y -qq wget gnupg ca-certificates fonts-liberation libnss3 libxss1
+  - wget -q -O /tmp/chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+  - apt-get install -y -qq /tmp/chrome.deb || (apt-get -f install -y -qq && apt-get install -y -qq /tmp/chrome.deb)
+  - google-chrome --version
+
+regression:
+  stage: test
+  script:
+    - mvn $MAVEN_CLI_OPTS clean test -Dsurefire.suiteXmlFiles=regression.xml
+  artifacts:
+    when: always
+    expire_in: 1 week
+    reports:
+      junit: target/surefire-reports/*.xml
+    paths:
+      - screenshots/
+      - logs/
+
+smoke:
+  stage: test
+  when: manual
+  script:
+    - mvn $MAVEN_CLI_OPTS clean test -Dsurefire.suiteXmlFiles=smoke.xml
+  artifacts:
+    when: always
+    expire_in: 1 week
+    reports:
+      junit: target/surefire-reports/*.xml
+    paths:
+      - screenshots/
+      - logs/

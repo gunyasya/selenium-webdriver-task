@@ -21,11 +21,16 @@
 src/main/java/
 ├── driver/
 │   ├── Browser.java            # enum, WebDriver supplier per browser (Chrome/Firefox)
+│   │                           # + isHeadless() — -Dheadless flag, defaults to true in CI
 │   ├── BrowserContext.java     # ThreadLocal<Browser> — which browser this thread runs
 │   └── WebDriverFactory.java   # ThreadLocal<WebDriver> — lazy create / quit+cleanup
+├── model/
+│   ├── User.java                # record: username, password
+│   ├── Product.java              # record: name, price
+│   └── CheckoutInfo.java         # record: firstName, lastName, zipCode
 └── pages/
-    ├── BasePage.java             # abstract; PageFactory init, explicit-wait helpers
-    ├── PageUrls.java             # URL fragment constants
+    ├── BasePage.java             # abstract; PageFactory init, explicit-wait helpers, DEBUG logging
+    ├── PageUrls.java             # URL path fragments (base URL comes from ConfigReader instead)
     ├── LoginPage.java
     ├── InventoryPage.java
     ├── CartPage.java
@@ -34,21 +39,48 @@ src/main/java/
     ├── CheckoutCompletePage.java
     └── ProductDetailPage.java
 
-src/test/java/tests/
-├── BaseTest.java                # per-method browser lifecycle (@BeforeMethod/@AfterMethod)
-├── SingleItemCheckoutTest.java
-├── InvalidLoginTest.java
-└── SortAndNavigateTest.java
+src/test/java/
+├── config/
+│   └── ConfigReader.java         # loads config/<env>.properties, selected via -Denv
+├── listeners/
+│   └── ScreenshotListener.java   # ITestListener; on failure, saves a screenshot + logs its path
+└── tests/
+    ├── BaseTest.java             # per-method browser lifecycle, reads -Dbrowser
+    ├── SingleItemCheckoutTest.java   # @Test(groups = {"smoke", "regression"})
+    ├── InvalidLoginTest.java         # @Test(groups = {"regression"})
+    └── SortAndNavigateTest.java      # @Test(groups = {"regression"})
 
-testng.xml                       # suite wiring all 3 scenario classes
+src/test/resources/
+├── config/
+│   ├── qa.properties             # base.url, user.username=standard_user, user.password
+│   └── staging.properties        # same base.url, user.username=performance_glitch_user
+└── logback.xml                   # console + daily-rotating file appender
+
+smoke.xml                          # runs just the smoke-tagged class
+regression.xml                     # runs all 3 (Surefire default, see pom.xml)
+.gitlab-ci.yml                     # CI pipeline — see "CI Pipeline" below
 ```
 
-POM with PageFactory. `BasePage` is abstract; each page extends it and exposes only public action/assertion-support methods —
-locators and raw Selenium calls stay private/protected, never touched directly by tests.
+Page Object Model with PageFactory (`@FindBy`). `BasePage` is abstract; every page extends it
+and exposes only public action/assertion-support methods — locators and raw Selenium calls stay
+private/protected, never touched directly by tests.
 
 Browser lifecycle is per test method: each `@Test` gets a brand-new `WebDriver` session
-(`@BeforeMethod`/`@AfterMethod` in `BaseTest`), so there's no shared state
-(cookies, login session, implicit wait setting) to accidentally leak between scenarios.
+(`@BeforeMethod`/`@AfterMethod` in `BaseTest`), so there's no shared state (cookies, login
+session, implicit wait setting) to accidentally leak between scenarios.
+
+## Business Model
+
+`model.User`, `model.Product`, `model.CheckoutInfo` are Java records used as method params
+across the page objects (`LoginPage.login(User)`, `InventoryPage.addToCart(Product)`,
+`CheckoutInfoPage.fillForm(CheckoutInfo)`) instead of hardcoded strings.
+
+## Environments
+
+`ConfigReader` loads `config/<env>.properties` from the classpath, selected via `-Denv`
+(default `qa`). The two environments share the same base URL, but log in as different test accounts —
+`qa` uses `standard_user`, `staging`uses `performance_glitch_user`, SauceDemo's built-in "slow env" account.
+This gives a real behavioral difference between environments rather than duplicated property values.
 
 ## Locator Strategy
 
@@ -64,8 +96,28 @@ Different strategies are chosen per element based on what's most stable:
 - **Explicit** — `BasePage` wraps every interaction (`click`, `typeText`, `getText`, `urlContains`)
   in `WebDriverWait` + `ExpectedConditions`. This is the default across all three scenarios.
 - **Implicit** — scoped tightly to one step in `SingleItemCheckoutTest`: set right before `addToCart`
-  (giving the product grid time to finish rendering after login), reset to `Duration.ZERO` immediately after. 
+  (giving the product grid time to finish rendering after login), reset to `Duration.ZERO` immediately after.
   Not set globally, to avoid the known implicit+explicit poll-stacking issue on a shared `WebDriver` instance.
+
+## Logging
+
+`logback.xml` writes to both console and a daily-rotating file (`logs/automation.<yyyy-MM-dd>.log`)
+by default — no flag needed. Three levels are in active use:
+
+- **DEBUG** (`BasePage`) — low-level actions: which element was clicked/typed into, what text was read
+- **INFO** (page classes) — business-level actions: "Logging in as: ...", "Proceeding to checkout"
+- **ERROR** (`ScreenshotListener`) — on test failure, logs the saved screenshot's path
+
+## Screenshot on Failure
+
+`ScreenshotListener` (`org.testng.ITestListener`) fires on `onTestFailure`, before `@AfterMethod`
+tears driver down — captures a screenshot, saves it to `screenshots/<testName>_<timestamp>.png`,
+and logs the path at ERROR level. Registered via `<listeners>` in `smoke.xml` and `regression.xml`.
+
+## Suites
+
+- `smoke.xml` — the core happy-path scenario only (`SingleItemCheckoutTest`)
+- `regression.xml` — all 3 scenarios; this is Surefire's default (configured in `pom.xml`)
 
 ## Scenarios
 
@@ -107,12 +159,42 @@ Different strategies are chosen per element based on what's most stable:
 
 ## Running the Tests
 
-Run the whole suite (all 3 scenarios):
+Run the regression suite (default, all 3 scenarios):
 ```bash
 mvn test
 ```
 
-Run a single scenario class:
+Run just the smoke suite:
+```bash
+mvn test -Dsurefire.suiteXmlFiles=smoke.xml
+```
+
+Run a single test class:
 ```bash
 mvn test -Dtest=InvalidLoginTest
 ```
+
+Choose browser, environment, and headless mode:
+```bash
+mvn test -Dbrowser=firefox -Denv=staging -Dheadless=true
+```
+
+- `-Dbrowser` — `chrome` (default) or `firefox`
+- `-Denv` — `qa` (default) or `staging`
+- `-Dheadless` — `true`/`false`; if omitted, defaults to `true` only when running in CI
+  (detected via the `CI` environment variable), `false` locally
+
+## CI Pipeline
+
+`.gitlab-ci.yml` runs the regression suite automatically on every push (headless Chrome — the
+`CI=true` variable GitLab sets on every job is picked up by `Browser.isHeadless()`), and offers
+the smoke suite as a manual-trigger job. Both jobs:
+
+- publish `target/surefire-reports/*.xml` as a JUnit report, so pass/fail shows up directly on
+  the pipeline and merge-request UI
+- archive `screenshots/` and `logs/` as artifacts, `when: always`, so failure screenshots survive
+  after the job container is destroyed
+
+Verified locally by running the same `before_script` steps in a Docker container matching the
+pipeline's image and architecture (`--platform linux/amd64`, matching GitLab.com's shared
+runners) before pushing.

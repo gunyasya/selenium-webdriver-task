@@ -1,5 +1,6 @@
 package pages;
 
+import lombok.extern.slf4j.Slf4j;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.PageFactory;
@@ -9,6 +10,7 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 import java.time.Duration;
 
 
+@Slf4j
 public abstract class BasePage {
     private static final Duration DEFAULT_WAIT_DURATION = Duration.ofSeconds(10);
 
@@ -25,16 +27,20 @@ public abstract class BasePage {
         wait.until(ExpectedConditions.elementToBeClickable(element));
         element.clear();
         element.sendKeys(text);
+        log.debug("Typed '{}' into element: {}", text, element);
     }
 
     protected void click(WebElement element) {
         wait.until(ExpectedConditions.elementToBeClickable(element));
         element.click();
+        log.debug("Clicked on {} element", element);
     }
 
     protected String getText(WebElement element) {
         wait.until(ExpectedConditions.visibilityOf(element));
-        return element.getText();
+        String text = element.getText();
+        log.debug("Read text '{}' from element", text);
+        return text;
     }
 
     protected void urlContains(String urlPart) {

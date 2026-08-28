@@ -1,5 +1,8 @@
 package tests;
 
+import config.ConfigReader;
+import model.CheckoutInfo;
+import model.Product;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 import pages.CartPage;
@@ -13,13 +16,13 @@ import java.util.List;
 
 public class SingleItemCheckoutTest extends BaseTest {
 
-    private static final String PRODUCT = "Sauce Labs Backpack";
+    private static final Product PRODUCT = new Product("Sauce Labs Backpack", 29.99);
 
-    @Test
+    @Test(groups = {"smoke", "regression"})
     public void shouldCheckoutSingleItem() {
         InventoryPage inventoryPage = new LoginPage(driver)
-                .open()
-                .login(VALID_USERNAME, VALID_PASSWORD);
+                .open(ConfigReader.getBaseUrl())
+                .login(defaultUser);
 
         // implicit wait, scoped to just this step: give the product grid time to
         // finish rendering before we interact with it, then reset immediately so
@@ -30,10 +33,10 @@ public class SingleItemCheckoutTest extends BaseTest {
 
         CartPage cartPage = inventoryPage.goToCart();
         List<String> itemNames = cartPage.getItemNames();
-        Assert.assertTrue(itemNames.contains(PRODUCT), "Cart should contain " + PRODUCT);
+        Assert.assertTrue(itemNames.contains(PRODUCT.name()), "Cart should contain " + PRODUCT.name());
 
         CheckoutOverviewPage overviewPage = cartPage.proceedToCheckout()
-                .fillForm("John", "Doe", "12345");
+                .fillForm(new CheckoutInfo("John", "Doe", "12345"));
 
         CheckoutCompletePage completePage = overviewPage.finish();
         Assert.assertEquals(completePage.getSuccessMessage(), "Thank you for your order!");

@@ -1,5 +1,6 @@
 package tests;
 
+import config.ConfigReader;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 import pages.InventoryPage;
@@ -10,11 +11,11 @@ import java.util.List;
 
 public class SortAndNavigateTest extends BaseTest {
 
-    @Test
+    @Test(groups = {"regression"})
     public void shouldSortViewDetailsAndNavigateBack() {
         InventoryPage inventoryPage = new LoginPage(driver)
-                .open()
-                .login(VALID_USERNAME, VALID_PASSWORD)
+                .open(ConfigReader.getBaseUrl())
+                .login(defaultUser)
                 .sortByPriceLowToHigh();
 
         List<Double> prices = inventoryPage.getItemPrices();

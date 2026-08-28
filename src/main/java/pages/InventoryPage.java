@@ -1,6 +1,7 @@
 package pages;
 
 import lombok.extern.slf4j.Slf4j;
+import model.Product;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
@@ -33,12 +34,12 @@ public class InventoryPage extends BasePage {
         super(driver);
     }
 
-    public InventoryPage addToCart(String productName) {
-        log.info("Adding product to cart: {}", productName);
+    public InventoryPage addToCart(Product product) {
+        log.info("Adding product to cart: {}", product.name());
         WebElement inventoryItem = visibleItems().stream()
-                .filter(it -> productName.equals(getText(it.findElement(INVENTORY_ITEM_NAME))))
+                .filter(it -> product.name().equals(getText(it.findElement(INVENTORY_ITEM_NAME))))
                 .findFirst()
-                .orElseThrow(() -> new NoSuchElementException("Product not found: " + productName));
+                .orElseThrow(() -> new NoSuchElementException("Product not found: " + product.name()));
 
         click(inventoryItem.findElement(ADD_TO_CART_BUTTON));
         return this;
