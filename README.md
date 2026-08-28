@@ -195,6 +195,23 @@ the smoke suite as a manual-trigger job. Both jobs:
 - archive `screenshots/` and `logs/` as artifacts, `when: always`, so failure screenshots survive
   after the job container is destroyed
 
-Verified locally by running the same `before_script` steps in a Docker container matching the
-pipeline's image and architecture (`--platform linux/amd64`, matching GitLab.com's shared
-runners) before pushing.
+Both jobs pass on a real GitLab pipeline run — Chrome installs, the test suite executes, and the
+JUnit report + `screenshots/`/`logs/` artifacts upload successfully.
+
+`before_script` was first validated locally in a Docker container matching the pipeline's image
+and architecture (`--platform linux/amd64`, matching GitLab.com's shared runners) before ever
+pushing. That local check wasn't the full story, though — three separate issues only surfaced
+on the actual GitLab runner and had to be fixed there:
+
+- `MAVEN_CLI_OPTS` originally included Maven's offline flag (`-o`), which fails immediately on
+  a runner's first-ever build, since the dependency cache starts out empty
+- `logback.xml`'s root logger at `DEBUG` also swept up a noisy third-party HTTP client logger
+  (used internally when `WebDriverManager` downloads chromedriver), which blew past GitLab's
+  4MB per-job log cap on a cold cache — fixed by scoping that one logger back to `INFO`
+- Headless Chrome refused to start inside the runner's container at all
+  (`SessionNotCreated: Chrome instance exited`) until `--no-sandbox` and
+  `--disable-dev-shm-usage` were added — both needed specifically because Chrome's sandbox
+  requires kernel privileges an unprivileged Docker container doesn't grant by default
+
+Firefox is not currently exercised in CI — only Chrome runs there (the project's default
+browser); Firefox works locally but has no pipeline coverage.
