@@ -5,7 +5,7 @@ stages:
 
 variables:
   MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
-  MAVEN_CLI_OPTS: "-o --batch-mode"
+  MAVEN_CLI_OPTS: "--batch-mode"
 
 cache:
   key: "$CI_COMMIT_REF_SLUG"
