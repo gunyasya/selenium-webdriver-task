@@ -23,6 +23,8 @@ public enum Browser {
                 ChromeOptions options = new ChromeOptions();
                 if (isHeadless()) {
                     options.addArguments("--headless=new");
+                    options.addArguments("--no-sandbox");
+                    options.addArguments("--disable-dev-shm-usage");
                 }
                 options.addArguments("--incognito");
                 return new ChromeDriver(options);
