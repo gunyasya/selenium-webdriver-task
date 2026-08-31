@@ -20,14 +20,24 @@
 ```
 src/main/java/
 ├── driver/
-│   ├── Browser.java            # enum, WebDriver supplier per browser (Chrome/Firefox)
-│   │                           # + isHeadless() — -Dheadless flag, defaults to true in CI
-│   ├── BrowserContext.java     # ThreadLocal<Browser> — which browser this thread runs
-│   └── WebDriverFactory.java   # ThreadLocal<WebDriver> — lazy create / quit+cleanup
+│   ├── Browser.java             # enum; Singleton (JVM enum-constant guarantee), selects a WebDriverCreator
+│   ├── BrowserContext.java      # ThreadLocal<Browser> — which browser this thread runs
+│   ├── WebDriverFactory.java    # ThreadLocal<WebDriver> — lazy create / quit+cleanup (lifecycle only)
+│   ├── creator/                 # Factory Method
+│   │   ├── WebDriverCreator.java       # abstract creator; shared isHeadless()/maximize() helpers
+│   │   ├── ChromeDriverCreator.java    # builds the Chrome options-decorator chain below
+│   │   └── FirefoxDriverCreator.java
+│   └── options/                 # Decorator (Chrome only — see PATTERNS_AND_SOLID.md)
+│       ├── ChromeOptionsProvider.java        # component interface: getOptions()
+│       ├── BaseChromeOptionsProvider.java    # concrete component: plain ChromeOptions
+│       ├── HeadlessOptionsDecorator.java     # adds --headless=new/--no-sandbox/--disable-dev-shm-usage
+│       └── IncognitoOptionsDecorator.java    # adds --incognito
 ├── model/
 │   ├── User.java                # record: username, password
 │   ├── Product.java              # record: name, price
 │   └── CheckoutInfo.java         # record: firstName, lastName, zipCode
+├── utils/
+│   └── PriceParser.java         # parsePrice(String) — extracted out of BasePage (SOLID/SRP fix)
 └── pages/
     ├── BasePage.java             # abstract; PageFactory init, explicit-wait helpers, DEBUG logging
     ├── PageUrls.java             # URL path fragments (base URL comes from ConfigReader instead)
@@ -74,6 +84,13 @@ session, implicit wait setting) to accidentally leak between scenarios.
 `model.User`, `model.Product`, `model.CheckoutInfo` are Java records used as method params
 across the page objects (`LoginPage.login(User)`, `InventoryPage.addToCart(Product)`,
 `CheckoutInfoPage.fillForm(CheckoutInfo)`) instead of hardcoded strings.
+
+## Design Patterns & SOLID
+
+Singleton (`Browser` enum), Factory Method (`driver/creator/`), and Decorator (`driver/options/`)
+are implemented in the driver-creation layer, plus 3 SOLID fixes applied to existing classes —
+see [`PATTERNS_AND_SOLID.md`](PATTERNS_AND_SOLID.md) for the full write-up with reasoning and
+proof each pattern is actually exercised at runtime.
 
 ## Environments
 
@@ -187,7 +204,7 @@ mvn test -Dbrowser=firefox -Denv=staging -Dheadless=true
 ## CI Pipeline
 
 `.gitlab-ci.yml` runs the regression suite automatically on every push (headless Chrome — the
-`CI=true` variable GitLab sets on every job is picked up by `Browser.isHeadless()`), and offers
+`CI=true` variable GitLab sets on every job is picked up by `WebDriverCreator.isHeadless()`), and offers
 the smoke suite as a manual-trigger job. Both jobs:
 
 - publish `target/surefire-reports/*.xml` as a JUnit report, so pass/fail shows up directly on

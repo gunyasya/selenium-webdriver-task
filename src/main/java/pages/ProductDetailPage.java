@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.FindBy;
+import utils.PriceParser;
 
 @Slf4j
 public class ProductDetailPage extends BasePage {
@@ -23,6 +24,6 @@ public class ProductDetailPage extends BasePage {
     }
 
     public Double getProductPrice() {
-        return parsePrice(getText(productPrice));
+        return PriceParser.parsePrice(getText(productPrice));
     }
 }

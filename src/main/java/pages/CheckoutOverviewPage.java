@@ -5,6 +5,7 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.FindBy;
 import org.openqa.selenium.support.ui.ExpectedConditions;
+import utils.PriceParser;
 
 import java.util.List;
 
@@ -29,13 +30,13 @@ public class CheckoutOverviewPage extends BasePage {
         wait.until(ExpectedConditions.visibilityOfAllElements(cartItemPrices));
         return cartItemPrices.stream()
                 .map(this::getText)
-                .map(this::parsePrice)
+                .map(PriceParser::parsePrice)
                 .toList();
     }
 
     public Double getSubTotal() {
         log.info("Getting items subtotal price");
-        return parsePrice(getText(subTotalPrice));
+        return PriceParser.parsePrice(getText(subTotalPrice));
     }
 
     public CheckoutCompletePage finish() {

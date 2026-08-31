@@ -47,7 +47,4 @@ public abstract class BasePage {
         wait.until(ExpectedConditions.urlContains(urlPart));
     }
 
-    protected Double parsePrice(String price) {
-        return Double.parseDouble(price.replaceAll("[^0-9.]", ""));
-    }
 }

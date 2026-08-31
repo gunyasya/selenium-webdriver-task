@@ -8,6 +8,7 @@ import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.FindBy;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.Select;
+import utils.PriceParser;
 
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -64,7 +65,7 @@ public class InventoryPage extends BasePage {
         wait.until(ExpectedConditions.visibilityOfAllElements(itemPrices));
         return itemPrices.stream()
                 .map(this::getText)
-                .map(this::parsePrice)
+                .map(PriceParser::parsePrice)
                 .toList();
     }
 

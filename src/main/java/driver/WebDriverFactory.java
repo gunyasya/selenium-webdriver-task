@@ -18,8 +18,7 @@ public class WebDriverFactory {
 
     private static void initDriver() {
         Browser browser = BrowserContext.getBrowser();
-        WebDriver webDriver = browser.getWebDriverSupplier().get();
-        webDriver.manage().window().maximize();
+        WebDriver webDriver = browser.getDriverCreator().createDriver();
         DRIVER.set(webDriver);
     }
 
