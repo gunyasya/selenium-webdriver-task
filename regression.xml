@@ -8,6 +8,7 @@
             <class name="tests.SingleItemCheckoutTest"/>
             <class name="tests.InvalidLoginTest"/>
             <class name="tests.SortAndNavigateTest"/>
+            <class name="runner.CucumberTestRunner"/>
         </classes>
     </test>
 </suite>

@@ -16,7 +16,7 @@ public class SortAndNavigateTest extends BaseTest {
         InventoryPage inventoryPage = new LoginPage(driver)
                 .open(ConfigReader.getBaseUrl())
                 .login(defaultUser)
-                .sortByPriceLowToHigh();
+                .sortBy("Price (low to high)");
 
         List<Double> prices = inventoryPage.getItemPrices();
         List<Double> sortedPrices = prices.stream().sorted().toList();

@@ -14,6 +14,7 @@
 | WebDriverManager     | 5.7.0   |
 | Logback              | 1.4.14  |
 | Lombok               | 1.18.44 |
+| Cucumber (java/testng) | 7.20.1 |
 
 ## Framework Architecture
 
@@ -54,16 +55,23 @@ src/test/java/
 │   └── ConfigReader.java         # loads config/<env>.properties, selected via -Denv
 ├── listeners/
 │   └── ScreenshotListener.java   # ITestListener; on failure, saves a screenshot + logs its path
-└── tests/
-    ├── BaseTest.java             # per-method browser lifecycle, reads -Dbrowser
-    ├── SingleItemCheckoutTest.java   # @Test(groups = {"smoke", "regression"})
-    ├── InvalidLoginTest.java         # @Test(groups = {"regression"})
-    └── SortAndNavigateTest.java      # @Test(groups = {"regression"})
+├── tests/
+│   ├── BaseTest.java             # per-method browser lifecycle, reads -Dbrowser
+│   ├── SingleItemCheckoutTest.java   # @Test(groups = {"smoke", "regression"})
+│   ├── InvalidLoginTest.java         # @Test(groups = {"regression"})
+│   └── SortAndNavigateTest.java      # @Test(groups = {"regression"}) — plain TestNG version, kept alongside the BDD one below
+├── steps/
+│   ├── Hooks.java                # Cucumber @Before(order=0)/@After — browser lifecycle, mirrors BaseTest
+│   └── SortAndNavigateSteps.java # step defs for SortAndNavigate.feature, regex-based (@Given/@When/@Then)
+└── runner/
+    └── CucumberTestRunner.java   # extends AbstractTestNGCucumberTests; bridges Cucumber into TestNG/Surefire
 
 src/test/resources/
 ├── config/
 │   ├── qa.properties             # base.url, user.username=standard_user, user.password
 │   └── staging.properties        # same base.url, user.username=performance_glitch_user
+├── features/
+│   └── SortAndNavigate.feature   # Background + Scenario Outline + Examples (BDD version of Scenario 3)
 └── logback.xml                   # console + daily-rotating file appender
 
 smoke.xml                          # runs just the smoke-tagged class
@@ -173,6 +181,33 @@ and logs the path at ERROR level. Registered via `<listeners>` in `smoke.xml` an
 7. Assert the product detail page shows the matching name and price
 8. Navigate back to the inventory page (`driver.navigate().back()`)
 9. Assert the inventory page is displayed again
+
+## BDD with Cucumber
+
+`SortAndNavigate.feature` re-expresses Scenario 3 as Gherkin, driven by Cucumber-JVM on top of existing TestNG setup
+(no JUnit runner — project's architecture is TestNG-based, so `cucumber-testng` + `AbstractTestNGCucumberTests`
+was used instead of `cucumber-junit`).
+
+- **`Background`** — login step (`Given user is logged as a "standard_user"`)
+runs once before each row in `Examples`, instead of being repeated in scenario body.
+- **`Scenario Outline` + `Examples`** — one scenario definition, run once per row:
+
+  | sortOption           |
+  |-----------------------|
+  | Price (low to high)  |
+  | Price (high to low)  |
+  | Name (A to Z)         |
+  | Name (Z to A)         |
+
+  `Then` step branches on sort option's content (`Price`/`Name`, ASC/DESC)
+  to assert correct order — one step definition covers all four rows.
+- **Regex step definitions** — step defs use Java regex (`^...$`), not Cucumber Expressions, e.g.
+  `@When("^user sorts products by \"([^\"]+)\"$")`, per task's filtering/parametrization requirement.
+- **Wiring** — `Hooks` (`@Before(order=0)`/`@After`) owns browser create/quit, mirroring `BaseTest`'s
+  lifecycle but via Cucumber's own hooks. `SortAndNavigateSteps` picks up the same `WebDriver` via
+  `WebDriverFactory`'s `ThreadLocal` in its own `@Before(order=1)`.
+- `CucumberTestRunner` registered in `regression.xml` alongside plain TestNG tests, so `mvn test`
+  runs both the original test classes and all four Cucumber Examples rows in one go.
 
 ## Running the Tests
 

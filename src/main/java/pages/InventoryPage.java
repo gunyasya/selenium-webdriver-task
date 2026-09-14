@@ -31,6 +31,9 @@ public class InventoryPage extends BasePage {
     @FindBy(css = "[data-test='inventory-item-price']")
     private List<WebElement> itemPrices;
 
+    @FindBy(css = "[data-test='inventory-item-name']")
+    private List<WebElement> itemNames;
+
     public InventoryPage(WebDriver driver) {
         super(driver);
     }
@@ -53,10 +56,10 @@ public class InventoryPage extends BasePage {
         return new CartPage(driver);
     }
 
-    public InventoryPage sortByPriceLowToHigh() {
-        log.info("Sorting products by price: low to high");
+    public InventoryPage sortBy(String option) {
+        log.info("Sorting products by selected option");
         wait.until(ExpectedConditions.elementToBeClickable(sortDropdown));
-        new Select(sortDropdown).selectByVisibleText("Price (low to high)");
+        new Select(sortDropdown).selectByVisibleText(option);
         return this;
     }
 
@@ -66,6 +69,14 @@ public class InventoryPage extends BasePage {
         return itemPrices.stream()
                 .map(this::getText)
                 .map(PriceParser::parsePrice)
+                .toList();
+    }
+
+    public List<String> getItemNames() {
+        log.info("Getting item names");
+        wait.until(ExpectedConditions.visibilityOfAllElements(itemNames));
+        return itemNames.stream()
+                .map(this::getText)
                 .toList();
     }
 

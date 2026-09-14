@@ -20,7 +20,13 @@ public class ScreenshotListener implements ITestListener {
 
     @Override
     public void onTestFailure(ITestResult result) {
-        WebDriver driver = WebDriverFactory.getDriver();
+        WebDriver driver;
+        try {
+            driver = WebDriverFactory.getDriver();
+        } catch (IllegalStateException e) {
+            log.warn("Skipping screenshot, browser not available: {}", result.getName());
+            return;
+        }
         TakesScreenshot ts = (TakesScreenshot) driver;
         File screenshot = ts.getScreenshotAs(OutputType.FILE);
         Date d = new Date();
