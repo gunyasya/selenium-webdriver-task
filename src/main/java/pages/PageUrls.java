@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 public class PageUrls {
 
     public static final String INVENTORY = "inventory";
+    public static final String INVENTORY_ITEM = "inventory-item";
     public static final String CART = "cart";
     public static final String CHECKOUT_STEP_ONE = "checkout-step-one";
     public static final String CHECKOUT_STEP_TWO = "checkout-step-two";

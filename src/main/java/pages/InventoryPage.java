@@ -83,6 +83,7 @@ public class InventoryPage extends BasePage {
     public ProductDetailPage viewFirstProduct() {
         log.info("Viewing first listed product");
         click(firstItemName());
+        urlContains(PageUrls.INVENTORY_ITEM);
         return new ProductDetailPage(driver);
     }
 
