@@ -1,10 +1,14 @@
 package pages;
 
 import lombok.extern.slf4j.Slf4j;
+import org.openqa.selenium.NoSuchElementException;
+import org.openqa.selenium.StaleElementReferenceException;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.PageFactory;
 import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.FluentWait;
+import org.openqa.selenium.support.ui.Wait;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
 import java.time.Duration;
@@ -15,11 +19,14 @@ public abstract class BasePage {
     private static final Duration DEFAULT_WAIT_DURATION = Duration.ofSeconds(10);
 
     protected WebDriver driver;
-    protected WebDriverWait wait;
+    protected Wait<WebDriver> wait;
 
     public BasePage(WebDriver driver) {
         this.driver = driver;
-        this.wait = new WebDriverWait(driver, DEFAULT_WAIT_DURATION);
+        this.wait = new FluentWait<>(driver)
+                .withTimeout(DEFAULT_WAIT_DURATION)
+                .pollingEvery(Duration.ofMillis(200))
+                .ignoring(NoSuchElementException.class, StaleElementReferenceException.class);
         PageFactory.initElements(driver, this);
     }
 

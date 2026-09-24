@@ -1,0 +1,4 @@
+rp.endpoint=https://rp.epam.com
+rp.api.key=YOUR_API_KEY_HERE
+rp.project=your_project_name
+rp.launch=selenium-webdriver-task

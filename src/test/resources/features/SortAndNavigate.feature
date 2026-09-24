@@ -3,7 +3,7 @@ Feature: Product Inventory Management
   Background:
     Given user is logged as a "standard_user"
 
-  Scenario Outline: Sort products by price, view details, and navigate back
+  Scenario Outline: Sort products by <sortOption>, view details, and navigate back
     When user sorts products by "<sortOption>"
     Then products should be displayed in "<sortOption>" sorted order
 

@@ -38,7 +38,8 @@ src/main/java/
 │   ├── Product.java              # record: name, price
 │   └── CheckoutInfo.java         # record: firstName, lastName, zipCode
 ├── utils/
-│   └── PriceParser.java         # parsePrice(String) — extracted out of BasePage (SOLID/SRP fix)
+│   ├── PriceParser.java         # parsePrice(String) — extracted out of BasePage (SOLID/SRP fix)
+│   └── ScreenshotUtils.java     # captures screenshot bytes from a WebDriver (pure Selenium, no Report Portal dependency)
 └── pages/
     ├── BasePage.java             # abstract; PageFactory init, explicit-wait helpers, DEBUG logging
     ├── PageUrls.java             # URL path fragments (base URL comes from ConfigReader instead)
@@ -54,7 +55,8 @@ src/test/java/
 ├── config/
 │   └── ConfigReader.java         # loads config/<env>.properties, selected via -Denv
 ├── listeners/
-│   └── ScreenshotListener.java   # ITestListener; on failure, saves a screenshot + logs its path
+│   ├── ScreenshotListener.java   # ITestListener; on success/failure, attaches a screenshot to Report Portal
+│   └── ScreenshotReporter.java   # shared logic: capture, save locally, emitLog to Report Portal — used by both TestNG and Cucumber paths
 ├── tests/
 │   ├── BaseTest.java             # per-method browser lifecycle, reads -Dbrowser
 │   ├── SingleItemCheckoutTest.java   # @Test(groups = {"smoke", "regression"})
@@ -72,7 +74,11 @@ src/test/resources/
 │   └── staging.properties        # same base.url, user.username=performance_glitch_user
 ├── features/
 │   └── SortAndNavigate.feature   # Background + Scenario Outline + Examples (BDD version of Scenario 3)
-└── logback.xml                   # console + daily-rotating file appender
+├── META-INF/services/
+│   └── org.testng.ITestNGListener      # SPI registration — activates Report Portal's TestNG agent automatically
+├── logback.xml                   # console + daily-rotating file appender
+├── reportportal.properties.example  # template — copy to reportportal.properties and fill in your own API key
+└── reportportal.properties       # git-ignored; your real endpoint/project/API key go here
 
 smoke.xml                          # runs just the smoke-tagged class
 regression.xml                     # runs all 3 (Surefire default, see pom.xml)
@@ -131,13 +137,39 @@ by default — no flag needed. Three levels are in active use:
 
 - **DEBUG** (`BasePage`) — low-level actions: which element was clicked/typed into, what text was read
 - **INFO** (page classes) — business-level actions: "Logging in as: ...", "Proceeding to checkout"
-- **ERROR** (`ScreenshotListener`) — on test failure, logs the saved screenshot's path
+- **ERROR/INFO** (`ScreenshotReporter`) — logs the saved screenshot's path; ERROR on test failure, INFO on success
 
-## Screenshot on Failure
+## Reporting (Report Portal)
 
-`ScreenshotListener` (`org.testng.ITestListener`) fires on `onTestFailure`, before `@AfterMethod`
-tears driver down — captures a screenshot, saves it to `screenshots/<testName>_<timestamp>.png`,
-and logs the path at ERROR level. Registered via `<listeners>` in `smoke.xml` and `regression.xml`.
+Test execution is reported to [EPAM Report Portal](https://reportportal.io/), including a
+screenshot attached to every test — pass or fail — for both TestNG tests and Cucumber scenarios.
+
+**Setup** — copy `reportportal.properties.example` (in git) to `reportportal.properties`
+  (gitignore) in `src/test/resources/`, and fill in own `rp.endpoint`, `rp.api.key`, `rp.project`
+
+Real file is never committed — only `.example` template is.
+
+**How it's wired:**
+
+- `agent-java-testng` (test-scoped Maven dependency) + `META-INF/services/org.testng.ITestNGListener`
+  registers Report Portal's TestNG agent via Java's `ServiceLoader` — no explicit `<listeners>`
+  entry needed for the RP agent itself; it activates automatically whenever TestNG runs.
+- `ScreenshotUtils.capture(WebDriver)` (`src/main/java/utils`) grabs raw screenshot bytes — pure
+  Selenium, no Report Portal dependency, so it stays safe to use from main code.
+- `ScreenshotReporter.attach(driver, name, level)` (`src/test/java/listeners`) is the shared
+  reporting logic: captures via `ScreenshotUtils`, saves to `screenshots/<name>_<timestamp>.png`,
+  and calls `ReportPortal.emitLog(...)` to attach it to the currently active RP test item.
+- **TestNG path** — `ScreenshotListener` calls `ScreenshotReporter` from both `onTestSuccess` (INFO)
+  and `onTestFailure` (ERROR), before `@AfterMethod` tears driver down. 
+  Registered via `<listeners>` in `smoke.xml` and `regression.xml`.
+- **Cucumber path** — `Hooks.tearDown(Scenario)` calls `ScreenshotReporter` directly.
+  Since `Hooks`'s `@After` runs *inside* single TestNG `runScenario` test method,
+  `ReportPortal.emitLog(...)` still nests correctly under that method's RP item.
+  Level is picked via `scenario.isFailed()`.
+- `SortAndNavigate.feature`'s `Scenario Outline` title includes `<sortOption>` placeholder,
+  so Cucumber substitutes actual example value into `Scenario.getName()` per run — each of
+  4 Examples rows gets a distinct name/screenshot in Report Portal instead of 4 identical
+  "runScenario" entries.
 
 ## Suites
 
@@ -267,3 +299,30 @@ on the actual GitLab runner and had to be fixed there:
 
 Firefox is not currently exercised in CI — only Chrome runs there (the project's default
 browser); Firefox works locally but has no pipeline coverage.
+
+## Jenkins CI (local)
+
+Local Jenkins controller + agent setup, built as a separate exercise from GitLab pipeline —
+both this repo and an unrelated demo repo are built through it.
+
+- **Server** — Jenkins LTS installed locally via Homebrew, running on port **8081**.
+- **Agent node** — one permanent agent (`agent1`) connected via inbound (WebSocket) launch
+  method, running on the same machine as controller. Both jobs are restricted to this node —
+  nothing runs on the built-in/master node.
+
+**Job 1 — `helloci-build`** — freestyle job pulling
+[`vitalliuss/helloci`](https://github.com/vitalliuss/helloci) and building its `Java/` module:
+Git SCM → Maven goal `clean package` with root POM `Java/pom.xml`.
+
+**Job 2 — `framework-tests`** — freestyle job pulling this repo and running regression suite:
+- Git SCM → this repo, `main` branch
+- Param: `BROWSER` (`chrome`/`firefox`), `ENV` (`qa`/`staging`/`prod`) — choice params, consumed
+  the same way as `mvn test -Dbrowser=... -Denv=...` locally
+- Build step: `mvn clean test -Dbrowser=$BROWSER -Denv=$ENV`
+
+**Triggers** (both jobs) — Poll SCM `H/5 * * * *` (picks up commits within 5 minutes) and
+Build periodically `H 0 * * *` (midnight).
+
+Since controller only listens on `127.0.0.1`, it isn't reachable outside this machine —
+evidence (node status, job config, triggers, console logs) is shared as screenshots
+instead of a live link.

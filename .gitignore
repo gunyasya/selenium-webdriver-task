@@ -2,6 +2,7 @@ target/
 !.mvn/wrapper/maven-wrapper.jar
 /screenshots/
 /logs/
+src/test/resources/reportportal.properties
 !**/src/main/**/target/
 !**/src/test/**/target/
 .kotlin
