@@ -27,12 +27,9 @@ public class CheckoutOverviewPage extends BasePage {
 
     public List<Double> getItemPrices() {
         log.info("Getting item prices");
-        wait.until(ExpectedConditions.visibilityOfAllElements(cartItemPrices));
-        return cartItemPrices.stream()
-                .map(this::getText)
-                .map(PriceParser::parsePrice)
-                .toList();
+        return readPrices(cartItemPrices);
     }
+
 
     public Double getSubTotal() {
         log.info("Getting items subtotal price");

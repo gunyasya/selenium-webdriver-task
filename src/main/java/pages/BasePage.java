@@ -10,8 +10,10 @@ import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.FluentWait;
 import org.openqa.selenium.support.ui.Wait;
 import org.openqa.selenium.support.ui.WebDriverWait;
+import utils.PriceParser;
 
 import java.time.Duration;
+import java.util.List;
 
 
 @Slf4j
@@ -41,6 +43,14 @@ public abstract class BasePage {
         wait.until(ExpectedConditions.elementToBeClickable(element));
         element.click();
         log.debug("Clicked on {} element", element);
+    }
+
+    protected List<Double> readPrices(List<WebElement> priceElements) {
+        wait.until(ExpectedConditions.visibilityOfAllElements(priceElements));
+        return priceElements.stream()
+                .map(this::getText)
+                .map(PriceParser::parsePrice)
+                .toList();
     }
 
     protected String getText(WebElement element) {

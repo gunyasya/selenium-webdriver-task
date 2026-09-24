@@ -10,6 +10,10 @@ public class BrowserContext {
 
     private static final ThreadLocal<Browser> BROWSER = new ThreadLocal<>();
 
+    public static void initFromSystemProperty() {
+        setBrowser(Browser.valueOf(System.getProperty("browser", "chrome").toUpperCase()));
+    }
+
     public static void setBrowser(Browser name) {
         BROWSER.set(name);
     }

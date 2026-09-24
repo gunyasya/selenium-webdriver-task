@@ -1,7 +1,6 @@
 package tests;
 
 import config.ConfigReader;
-import driver.Browser;
 import driver.BrowserContext;
 import driver.WebDriverFactory;
 import model.User;
@@ -16,7 +15,7 @@ public abstract class BaseTest {
 
     @BeforeMethod
     public void setUp() {
-        BrowserContext.setBrowser(Browser.valueOf(System.getProperty("browser", "chrome").toUpperCase()));
+        BrowserContext.initFromSystemProperty();
         driver = WebDriverFactory.getDriver();
         defaultUser = ConfigReader.getDefaultUser();
     }

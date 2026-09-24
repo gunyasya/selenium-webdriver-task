@@ -1,7 +1,6 @@
 package steps;
 
 import com.epam.reportportal.listeners.LogLevel;
-import driver.Browser;
 import driver.BrowserContext;
 import driver.WebDriverFactory;
 import io.cucumber.java.After;
@@ -14,8 +13,7 @@ public class Hooks {
 
     @Before(order = 0)
     public void setUp() {
-        BrowserContext.setBrowser(Browser.valueOf(System.getProperty("browser", "chrome").toUpperCase()));
-        WebDriverFactory.getDriver();
+        BrowserContext.initFromSystemProperty();
     }
 
     @After

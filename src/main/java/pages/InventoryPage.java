@@ -8,7 +8,6 @@ import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.FindBy;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.Select;
-import utils.PriceParser;
 
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -65,12 +64,9 @@ public class InventoryPage extends BasePage {
 
     public List<Double> getItemPrices() {
         log.info("Getting item prices");
-        wait.until(ExpectedConditions.visibilityOfAllElements(itemPrices));
-        return itemPrices.stream()
-                .map(this::getText)
-                .map(PriceParser::parsePrice)
-                .toList();
+        return readPrices(itemPrices);
     }
+
 
     public List<String> getItemNames() {
         log.info("Getting item names");
@@ -89,6 +85,10 @@ public class InventoryPage extends BasePage {
 
     public String getFirstProductName() {
         return getText(firstItemName());
+    }
+
+    public boolean isDisplayed() {
+        return driver.getCurrentUrl().contains(PageUrls.INVENTORY);
     }
 
     private List<WebElement> visibleItems() {

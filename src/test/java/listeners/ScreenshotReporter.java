@@ -2,6 +2,7 @@ package listeners;
 
 import com.epam.reportportal.listeners.LogLevel;
 import com.epam.reportportal.service.ReportPortal;
+import lombok.extern.slf4j.Slf4j;
 import org.openqa.selenium.WebDriver;
 import utils.ScreenshotUtils;
 
@@ -11,6 +12,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Date;
 
+@Slf4j
 public class ScreenshotReporter {
     public static void attach(WebDriver driver, String name, LogLevel level) {
         byte[] screenshot = ScreenshotUtils.capture(driver);
@@ -23,6 +25,11 @@ public class ScreenshotReporter {
             ReportPortal.emitLog(name, level.name(), new Date(), destination.toFile());
         } catch (IOException e) {
             throw new RuntimeException(e);
+        }
+        if (level == LogLevel.ERROR) {
+            log.error("Test failed, screenshot saved: {}", destination);
+        } else {
+            log.info("Screenshot saved: {}", destination);
         }
     }
 }

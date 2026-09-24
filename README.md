@@ -220,8 +220,10 @@ Real file is never committed — only `.example` template is.
 (no JUnit runner — project's architecture is TestNG-based, so `cucumber-testng` + `AbstractTestNGCucumberTests`
 was used instead of `cucumber-junit`).
 
-- **`Background`** — login step (`Given user is logged as a "standard_user"`)
-runs once before each row in `Examples`, instead of being repeated in scenario body.
+- **`Background`** — login step (`Given user is logged in`) runs once before each row in
+`Examples`, instead of being repeated in scenario body. It doesn't take a username — like the
+plain TestNG version of this scenario, it always logs in as the current environment's default
+user (`ConfigReader.getDefaultUser()`), so `-Denv` still controls who logs in.
 - **`Scenario Outline` + `Examples`** — one scenario definition, run once per row:
 
   | sortOption           |
@@ -316,7 +318,7 @@ Git SCM → Maven goal `clean package` with root POM `Java/pom.xml`.
 
 **Job 2 — `framework-tests`** — freestyle job pulling this repo and running regression suite:
 - Git SCM → this repo, `main` branch
-- Param: `BROWSER` (`chrome`/`firefox`), `ENV` (`qa`/`staging`/`prod`) — choice params, consumed
+- Param: `BROWSER` (`chrome`/`firefox`), `ENV` (`qa`/`staging`) — choice params, consumed
   the same way as `mvn test -Dbrowser=... -Denv=...` locally
 - Build step: `mvn clean test -Dbrowser=$BROWSER -Denv=$ENV`
 

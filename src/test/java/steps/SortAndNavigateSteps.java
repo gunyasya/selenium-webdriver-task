@@ -28,8 +28,8 @@ public class SortAndNavigateSteps {
         driver = WebDriverFactory.getDriver();
     }
 
-    @Given("^user is logged as a \"([^\"]+)\"$")
-    public void userIsLoggedIn(String username) {
+    @Given("^user is logged in$")
+    public void userIsLoggedIn() {
         inventoryPage = new LoginPage(driver)
                 .open(ConfigReader.getBaseUrl())
                 .login(ConfigReader.getDefaultUser());
@@ -74,11 +74,11 @@ public class SortAndNavigateSteps {
 
     @When("^user navigates back to product inventory page$")
     public void userNavigatesBack() {
-        driver.navigate().back();
+        inventoryPage = detailPage.backToInventory();
     }
 
     @Then("^product inventory page should be displayed again$")
     public void productInventoryPageShouldBeDisplayed() {
-        Assert.assertTrue(driver.getCurrentUrl().contains("inventory"));
+        Assert.assertTrue(inventoryPage.isDisplayed());
     }
 }

@@ -26,4 +26,11 @@ public class ProductDetailPage extends BasePage {
     public Double getProductPrice() {
         return PriceParser.parsePrice(getText(productPrice));
     }
+
+    public InventoryPage backToInventory() {
+        log.info("Navigating back to inventory page");
+        driver.navigate().back();
+        urlContains(PageUrls.INVENTORY);
+        return new InventoryPage(driver);
+    }
 }

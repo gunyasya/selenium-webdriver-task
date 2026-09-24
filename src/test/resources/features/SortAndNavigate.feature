@@ -1,7 +1,7 @@
 Feature: Product Inventory Management
 
   Background:
-    Given user is logged as a "standard_user"
+    Given user is logged in
 
   Scenario Outline: Sort products by <sortOption>, view details, and navigate back
     When user sorts products by "<sortOption>"
